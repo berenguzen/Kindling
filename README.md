@@ -2,7 +2,7 @@
 
 **Kindling** is the tooling around **Spark**, a small programming language built from scratch in Python: a hand-written lexer, a recursive-descent parser, and a tree-walking interpreter. No parser-generator libraries, no external dependencies.
 
-**[▶ Try Kindling in the browser](https://berenguzen.github.io/kindling/playground/)**
+**[▶ Try Kindling in the browser](https://berenguzen.github.io/Kindling/playground/)**
 
 A JavaScript port of the interpreter runs entirely client-side, so you can write and run Spark programs without installing anything. The source is in [`playground/`](./playground).
 
