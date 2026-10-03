@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kindling — the Spark playground</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+
+    --bg: #EFEDE6;
+    --panel: #FFFFFF;
+    --panel-border: #DEDAD0;
+    --text: #201C18;
+    --text-dim: #746C5F;
+    --accent: #C1571A;
+    --accent-soft: #F4DCC9;
+    --console-bg: #FBFAF7;
+    --error: #B3261E;
+    --success: #2E6B4F;
+    --shadow: rgba(30, 24, 16, 0.08);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14161B;
+      --panel: #1B1E25;
+      --panel-border: #2B2F38;
+      --text: #EDEAE3;
+      --text-dim: #9A968D;
+      --accent: #FF8A3D;
+      --accent-soft: #3A2A1C;
+      --console-bg: #101216;
+      --error: #FF8A7D;
+      --success: #5FD897;
+      --shadow: rgba(0, 0, 0, 0.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14161B;
+    --panel: #1B1E25;
+    --panel-border: #2B2F38;
+    --text: #EDEAE3;
+    --text-dim: #9A968D;
+    --accent: #FF8A3D;
+    --accent-soft: #3A2A1C;
+    --console-bg: #101216;
+    --error: #FF8A7D;
+    --success: #5FD897;
+    --shadow: rgba(0, 0, 0, 0.35);
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); height: 100%; }
+
+  body {
+    margin: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Space Grotesk", system-ui, -apple-system, sans-serif;
+    display: flex;
+    flex-direction: column;
+  }
+
+  ::selection { background: var(--accent-soft); }
+
+  a { color: var(--accent); }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+
+  .shell {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    max-width: 1180px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 28px 24px 20px;
+    gap: 18px;
+    min-height: 0;
+  }
+
+  header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .brand svg { width: 30px; height: 30px; flex-shrink: 0; }
+
+  .brand-text h1 {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .brand-text p {
+    margin: 2px 0 0;
+    font-size: 13.5px;
+    color: var(--text-dim);
+    font-weight: 500;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .tabs button {
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-dim);
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 7px;
+    padding: 7px 12px;
+    cursor: pointer;
+  }
+
+  .tabs button:hover { color: var(--text); }
+
+  .tabs button.active {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 14px;
+    min-height: 0;
+  }
+
+  .pane {
+    display: flex;
+    flex-direction: column;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 10px;
+    overflow: hidden;
+    min-height: 260px;
+    box-shadow: 0 1px 2px var(--shadow);
+  }
+
+  .pane-header {
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--text-dim);
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--panel-border);
+    font-family: "JetBrains Mono", monospace;
+  }
+
+  .editor-wrap {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .gutter {
+    padding: 12px 10px;
+    text-align: right;
+    color: var(--text-dim);
+    opacity: 0.55;
+    background: var(--panel);
+    border-right: 1px solid var(--panel-border);
+    overflow: hidden;
+    white-space: pre;
+    user-select: none;
+    font: 14px/1.6 "JetBrains Mono", monospace;
+  }
+
+  #code {
+    flex: 1;
+    border: none;
+    resize: none;
+    outline: none;
+    padding: 12px 14px;
+    background: transparent;
+    color: var(--text);
+    font: 14px/1.6 "JetBrains Mono", monospace;
+    white-space: pre;
+    overflow: auto;
+    tab-size: 4;
+  }
+
+  .console {
+    flex: 1;
+    overflow: auto;
+    background: var(--console-bg);
+    padding: 12px 14px;
+    font: 13.5px/1.7 "JetBrains Mono", monospace;
+  }
+
+  .console .line { white-space: pre-wrap; word-break: break-word; }
+  .console .line.err { color: var(--error); }
+  .console .empty { color: var(--text-dim); font-style: italic; }
+
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  .run-btn {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 14.5px;
+    font-weight: 600;
+    color: #fff;
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    cursor: pointer;
+  }
+
+  .run-btn:hover { filter: brightness(1.06); }
+  .run-btn:active { filter: brightness(0.94); }
+
+  .hint {
+    font-size: 12.5px;
+    color: var(--text-dim);
+    font-family: "JetBrains Mono", monospace;
+  }
+
+  .status {
+    margin-left: auto;
+    font-size: 13px;
+    color: var(--success);
+    font-weight: 600;
+  }
+
+  .status.err { color: var(--error); }
+
+  footer {
+    font-size: 12.5px;
+    color: var(--text-dim);
+    text-align: center;
+    padding-bottom: 4px;
+  }
+
+  @media (max-width: 760px) {
+    main { grid-template-columns: 1fr; }
+    .pane { min-height: 220px; }
+    .status { margin-left: 0; width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 1.5C12.7 6 13.6 8.6 18.5 9.5C13.6 10.4 12.7 13 12 17.5C11.3 13 10.4 10.4 5.5 9.5C10.4 8.6 11.3 6 12 1.5Z" fill="var(--accent)"/>
+        <path d="M19 14C19.35 15.9 19.7 16.75 21.5 17C19.7 17.25 19.35 18.1 19 20C18.65 18.1 18.3 17.25 16.5 17C18.3 16.75 18.65 15.9 19 14Z" fill="var(--accent)"/>
+      </svg>
+      <div class="brand-text">
+        <h1>Kindling</h1>
+        <p>Tooling for Spark — write, run, and watch a tiny language get walked live in your browser.</p>
+      </div>
+    </div>
+    <div class="tabs" id="tabs">
+      <button data-example="fibonacci" class="active">Fibonacci</button>
+      <button data-example="fizzbuzz">FizzBuzz</button>
+      <button data-example="arrays">Arrays &amp; bools</button>
+      <button data-example="scratch">Scratch</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="pane">
+      <div class="pane-header">program.spark</div>
+      <div class="editor-wrap">
+        <div class="gutter" id="gutter">1</div>
+        <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea>
+      </div>
+    </section>
+    <section class="pane">
+      <div class="pane-header">output</div>
+      <div class="console" id="console"><div class="empty">Nothing here yet — hit Run.</div></div>
+    </section>
+  </main>
+
+  <div class="toolbar">
+    <button class="run-btn" id="runBtn">▶ Run</button>
+    <span class="hint">Ctrl / ⌘ + Enter also runs</span>
+    <span class="status" id="status">Ready</span>
+  </div>
+
+  <footer>No server, no build step — every run happens right here, in this tab.</footer>
+</div>
+
+<script>
+// ============================================================
+// Spark — Lexer
+// ============================================================
+const KEYWORDS = {
+  let: "LET", if: "IF", else: "ELSE", while: "WHILE", func: "FUNC",
+  return: "RETURN", true: "TRUE", false: "FALSE", print: "PRINT",
+  and: "AND", or: "OR",
+};
+
+class LexerError extends Error {}
+class ParseError extends Error {}
+class SparkRuntimeError extends Error {}
+
+class Lexer {
+  constructor(source) {
+    this.source = source;
+    this.pos = 0;
+    this.line = 1;
+    this.tokens = [];
+  }
+  peek(offset = 0) {
+    const i = this.pos + offset;
+    return i >= this.source.length ? null : this.source[i];
+  }
+  advance() {
+    const ch = this.source[this.pos];
+    this.pos += 1;
+    if (ch === "\n") this.line += 1;
+    return ch;
+  }
+  add(type, value) { this.tokens.push({ type, value, line: this.line }); }
+
+  tokenize() {
+    while (this.pos < this.source.length) {
+      const ch = this.peek();
+      if (ch === " " || ch === "\t" || ch === "\r" || ch === "\n") { this.advance(); continue; }
+      if (ch === "#") { while (this.peek() !== null && this.peek() !== "\n") this.advance(); continue; }
+      if (/[0-9]/.test(ch)) { this.number(); continue; }
+      if (/[A-Za-z_]/.test(ch)) { this.identifier(); continue; }
+      if (ch === '"') { this.string(); continue; }
+      this.symbol();
+    }
+    this.add("EOF", null);
+    return this.tokens;
+  }
+  number() {
+    const start = this.pos;
+    while (this.peek() !== null && /[0-9]/.test(this.peek())) this.advance();
+    if (this.peek() === "." && this.peek(1) !== null && /[0-9]/.test(this.peek(1))) {
+      this.advance();
+      while (this.peek() !== null && /[0-9]/.test(this.peek())) this.advance();
+      this.add("NUMBER", parseFloat(this.source.slice(start, this.pos)));
+    } else {
+      this.add("NUMBER", parseInt(this.source.slice(start, this.pos), 10));
+    }
+  }
+  identifier() {
+    const start = this.pos;
+    while (this.peek() !== null && /[A-Za-z0-9_]/.test(this.peek())) this.advance();
+    const text = this.source.slice(start, this.pos);
+    if (KEYWORDS[text]) this.add(KEYWORDS[text], text);
+    else this.add("IDENT", text);
+  }
+  string() {
+    this.advance();
+    const start = this.pos;
+    while (this.peek() !== null && this.peek() !== '"') this.advance();
+    if (this.peek() === null) throw new LexerError(`Unterminated string at line ${this.line}`);
+    const text = this.source.slice(start, this.pos);
+    this.advance();
+    this.add("STRING", text);
+  }
+  symbol() {
+    const ch = this.advance();
+    const two = { "==": "EQ", "!=": "NEQ", ">=": "GTE", "<=": "LTE" };
+    const nxt = this.peek();
+    if (nxt !== null && two[ch + nxt]) { this.advance(); this.add(two[ch + nxt], ch + nxt); return; }
+    const single = { "+":"PLUS","-":"MINUS","*":"STAR","/":"SLASH","=":"ASSIGN",">":"GT","<":"LT","(":"LPAREN",")":"RPAREN","{":"LBRACE","}":"RBRACE","[":"LBRACKET","]":"RBRACKET",",":"COMMA",";":"SEMICOLON" };
+    if (single[ch]) { this.add(single[ch], ch); return; }
+    throw new LexerError(`Unexpected character '${ch}' at line ${this.line}`);
+  }
+}
+
+// ============================================================
+// Spark — Parser (recursive descent, AST nodes as tagged objects)
+// ============================================================
+class Parser {
+  constructor(tokens) { this.tokens = tokens; this.pos = 0; }
+  peek() { return this.tokens[this.pos]; }
+  peekNext() { return this.pos + 1 < this.tokens.length ? this.tokens[this.pos + 1] : null; }
+  advance() { return this.tokens[this.pos++]; }
+  check(type) { return this.peek().type === type; }
+  match(...types) { return types.includes(this.peek().type) ? this.advance() : null; }
+  expect(type, message) {
+    if (this.check(type)) return this.advance();
+    const tok = this.peek();
+    throw new ParseError(`${message} (got ${tok.type} '${tok.value}' at line ${tok.line})`);
+  }
+  parse() {
+    const stmts = [];
+    while (!this.check("EOF")) stmts.push(this.statement());
+    return stmts;
+  }
+  block() {
+    this.expect("LBRACE", "Expected '{' to start a block");
+    const stmts = [];
+    while (!this.check("RBRACE") && !this.check("EOF")) stmts.push(this.statement());
+    this.expect("RBRACE", "Expected '}' to close a block");
+    return stmts;
+  }
+  statement() {
+    if (this.check("LET")) return this.letStmt();
+    if (this.check("IF")) return this.ifStmt();
+    if (this.check("WHILE")) return this.whileStmt();
+    if (this.check("FUNC")) return this.funcDef();
+    if (this.check("RETURN")) return this.returnStmt();
+    if (this.check("PRINT")) return this.printStmt();
+    if (this.check("IDENT") && this.peekNext() !== null && this.peekNext().type === "ASSIGN") return this.assignStmt();
+    return { kind: "ExprStmt", expr: this.expression() };
+  }
+  letStmt() {
+    this.advance();
+    const nameTok = this.expect("IDENT", "Expected variable name after 'let'");
+    this.expect("ASSIGN", "Expected '=' after variable name");
+    return { kind: "LetStmt", name: nameTok.value, value: this.expression() };
+  }
+  assignStmt() {
+    const nameTok = this.advance();
+    this.expect("ASSIGN", "Expected '=' in assignment");
+    return { kind: "AssignStmt", name: nameTok.value, value: this.expression() };
+  }
+  printStmt() {
+    this.advance();
+    this.expect("LPAREN", "Expected '(' after 'print'");
+    const value = this.expression();
+    this.expect("RPAREN", "Expected ')' after print argument");
+    return { kind: "PrintStmt", value };
+  }
+  ifStmt() {
+    this.advance();
+    const condition = this.expression();
+    const thenBranch = this.block();
+    let elseBranch = null;
+    if (this.match("ELSE")) elseBranch = this.block();
+    return { kind: "IfStmt", condition, thenBranch, elseBranch };
+  }
+  whileStmt() {
+    this.advance();
+    const condition = this.expression();
+    const body = this.block();
+    return { kind: "WhileStmt", condition, body };
+  }
+  funcDef() {
+    this.advance();
+    const nameTok = this.expect("IDENT", "Expected function name after 'func'");
+    this.expect("LPAREN", "Expected '(' after function name");
+    const params = [];
+    if (!this.check("RPAREN")) {
+      params.push(this.expect("IDENT", "Expected parameter name").value);
+      while (this.match("COMMA")) params.push(this.expect("IDENT", "Expected parameter name").value);
+    }
+    this.expect("RPAREN", "Expected ')' after parameters");
+    return { kind: "FuncDef", name: nameTok.value, params, body: this.block() };
+  }
+  returnStmt() {
+    this.advance();
+    let value = null;
+    if (!this.check("RBRACE") && !this.check("EOF")) value = this.expression();
+    return { kind: "ReturnStmt", value };
+  }
+  expression() { return this.logicalOr(); }
+  logicalOr() {
+    let expr = this.logicalAnd();
+    while (this.check("OR")) { this.advance(); expr = { kind: "BinaryOp", left: expr, op: "or", right: this.logicalAnd() }; }
+    return expr;
+  }
+  logicalAnd() {
+    let expr = this.equality();
+    while (this.check("AND")) { this.advance(); expr = { kind: "BinaryOp", left: expr, op: "and", right: this.equality() }; }
+    return expr;
+  }
+  equality() {
+    let expr = this.comparison();
+    while (this.check("EQ") || this.check("NEQ")) { const op = this.advance(); expr = { kind: "BinaryOp", left: expr, op: op.value, right: this.comparison() }; }
+    return expr;
+  }
+  comparison() {
+    let expr = this.term();
+    while (["GT","LT","GTE","LTE"].includes(this.peek().type)) { const op = this.advance(); expr = { kind: "BinaryOp", left: expr, op: op.value, right: this.term() }; }
+    return expr;
+  }
+  term() {
+    let expr = this.factor();
+    while (["PLUS","MINUS"].includes(this.peek().type)) { const op = this.advance(); expr = { kind: "BinaryOp", left: expr, op: op.value, right: this.factor() }; }
+    return expr;
+  }
+  factor() {
+    let expr = this.unary();
+    while (["STAR","SLASH"].includes(this.peek().type)) { const op = this.advance(); expr = { kind: "BinaryOp", left: expr, op: op.value, right: this.unary() }; }
+    return expr;
+  }
+  unary() {
+    if (this.check("MINUS")) { this.advance(); return { kind: "UnaryOp", op: "-", operand: this.unary() }; }
+    return this.postfix();
+  }
+  postfix() {
+    let expr = this.primary();
+    while (this.check("LBRACKET")) {
+      this.advance();
+      const index = this.expression();
+      this.expect("RBRACKET", "Expected ']' after index");
+      expr = { kind: "IndexExpr", array: expr, index };
+    }
+    return expr;
+  }
+  primary() {
+    const tok = this.peek();
+    if (tok.type === "NUMBER") { this.advance(); return { kind: "NumberLiteral", value: tok.value }; }
+    if (tok.type === "STRING") { this.advance(); return { kind: "StringLiteral", value: tok.value }; }
+    if (tok.type === "TRUE") { this.advance(); return { kind: "BooleanLiteral", value: true }; }
+    if (tok.type === "FALSE") { this.advance(); return { kind: "BooleanLiteral", value: false }; }
+    if (tok.type === "LBRACKET") return this.arrayLiteral();
+    if (tok.type === "IDENT") {
+      this.advance();
+      if (this.check("LPAREN")) return this.finishCall(tok.value);
+      return { kind: "Identifier", name: tok.value };
+    }
+    if (tok.type === "LPAREN") {
+      this.advance();
+      const expr = this.expression();
+      this.expect("RPAREN", "Expected ')' after expression");
+      return expr;
+    }
+    throw new ParseError(`Unexpected token ${tok.type} '${tok.value}' at line ${tok.line}`);
+  }
+  arrayLiteral() {
+    this.expect("LBRACKET", "Expected '['");
+    const elements = [];
+    if (!this.check("RBRACKET")) {
+      elements.push(this.expression());
+      while (this.match("COMMA")) elements.push(this.expression());
+    }
+    this.expect("RBRACKET", "Expected ']' after array elements");
+    return { kind: "ArrayLiteral", elements };
+  }
+  finishCall(name) {
+    this.expect("LPAREN", "Expected '(' to start call arguments");
+    const args = [];
+    if (!this.check("RPAREN")) {
+      args.push(this.expression());
+      while (this.match("COMMA")) args.push(this.expression());
+    }
+    this.expect("RPAREN", "Expected ')' after arguments");
+    return { kind: "Call", callee: name, args };
+  }
+}
+
+// ============================================================
+// Spark — Interpreter (tree-walking)
+// ============================================================
+class ReturnSignal { constructor(value) { this.value = value; } }
+
+class Environment {
+  constructor(parent = null) { this.vars = new Map(); this.parent = parent; }
+  define(name, value) { this.vars.set(name, value); }
+  get(name) {
+    if (this.vars.has(name)) return this.vars.get(name);
+    if (this.parent) return this.parent.get(name);
+    throw new SparkRuntimeError(`Undefined variable '${name}'`);
+  }
+  assign(name, value) {
+    if (this.vars.has(name)) { this.vars.set(name, value); return; }
+    if (this.parent) { this.parent.assign(name, value); return; }
+    throw new SparkRuntimeError(`Cannot assign to undefined variable '${name}'`);
+  }
+}
+
+class SparkFunction {
+  constructor(decl, closure) { this.decl = decl; this.closure = closure; }
+  call(interp, args) {
+    const env = new Environment(this.closure);
+    this.decl.params.forEach((p, i) => env.define(p, args[i]));
+    try { interp.executeBlock(this.decl.body, env); }
+    catch (e) { if (e instanceof ReturnSignal) return e.value; throw e; }
+    return null;
+  }
+}
+
+class Interpreter {
+  constructor(onOutput) {
+    this.globals = new Environment();
+    this.onOutput = onOutput || (() => {});
+    this.steps = 0;
+    this.maxSteps = 3000000;
+    this.startTime = 0;
+    this.maxMillis = 4000;
+  }
+  run(statements) {
+    this.startTime = performance.now();
+    this.executeBlock(statements, this.globals);
+  }
+  tick() {
+    this.steps += 1;
+    if (this.steps > this.maxSteps) throw new SparkRuntimeError("Program exceeded the step limit (possible infinite loop)");
+    if ((this.steps & 1023) === 0 && performance.now() - this.startTime > this.maxMillis) {
+      throw new SparkRuntimeError("Program exceeded the time limit (possible infinite loop)");
+    }
+  }
+  executeBlock(statements, env) { for (const s of statements) this.execute(s, env); }
+  execute(stmt, env) {
+    this.tick();
+    switch (stmt.kind) {
+      case "LetStmt": env.define(stmt.name, this.evaluate(stmt.value, env)); return;
+      case "AssignStmt": env.assign(stmt.name, this.evaluate(stmt.value, env)); return;
+      case "PrintStmt": this.onOutput(this.stringify(this.evaluate(stmt.value, env))); return;
+      case "IfStmt": {
+        if (this.isTruthy(this.evaluate(stmt.condition, env))) this.executeBlock(stmt.thenBranch, new Environment(env));
+        else if (stmt.elseBranch !== null) this.executeBlock(stmt.elseBranch, new Environment(env));
+        return;
+      }
+      case "WhileStmt": {
+        while (this.isTruthy(this.evaluate(stmt.condition, env))) {
+          this.tick();
+          this.executeBlock(stmt.body, new Environment(env));
+        }
+        return;
+      }
+      case "FuncDef": env.define(stmt.name, new SparkFunction(stmt, env)); return;
+      case "ReturnStmt": {
+        let value = null;
+        if (stmt.value !== null) value = this.evaluate(stmt.value, env);
+        throw new ReturnSignal(value);
+      }
+      case "ExprStmt": this.evaluate(stmt.expr, env); return;
+      default: throw new SparkRuntimeError(`Unknown statement type: ${stmt.kind}`);
+    }
+  }
+  evaluate(expr, env) {
+    switch (expr.kind) {
+      case "NumberLiteral": return expr.value;
+      case "StringLiteral": return expr.value;
+      case "BooleanLiteral": return expr.value;
+      case "ArrayLiteral": return expr.elements.map((el) => this.evaluate(el, env));
+      case "IndexExpr": {
+        const array = this.evaluate(expr.array, env);
+        const index = this.evaluate(expr.index, env);
+        if (!Array.isArray(array)) throw new SparkRuntimeError("Cannot index a non-array value");
+        const i = Math.trunc(index);
+        if (i < 0 || i >= array.length) throw new SparkRuntimeError(`Array index out of range: ${index}`);
+        return array[i];
+      }
+      case "Identifier": return env.get(expr.name);
+      case "UnaryOp": {
+        const operand = this.evaluate(expr.operand, env);
+        if (expr.op === "-") return -operand;
+        throw new SparkRuntimeError(`Unknown unary operator '${expr.op}'`);
+      }
+      case "BinaryOp": {
+        if (expr.op === "and") {
+          const left = this.evaluate(expr.left, env);
+          if (!this.isTruthy(left)) return false;
+          return this.isTruthy(this.evaluate(expr.right, env));
+        }
+        if (expr.op === "or") {
+          const left = this.evaluate(expr.left, env);
+          if (this.isTruthy(left)) return true;
+          return this.isTruthy(this.evaluate(expr.right, env));
+        }
+        return this.applyBinary(expr.op, this.evaluate(expr.left, env), this.evaluate(expr.right, env));
+      }
+      case "Call": return this.callExpr(expr, env);
+      default: throw new SparkRuntimeError(`Unknown expression type: ${expr.kind}`);
+    }
+  }
+  applyBinary(op, left, right) {
+    switch (op) {
+      case "+":
+        if (Array.isArray(left) && Array.isArray(right)) return left.concat(right);
+        if (typeof left === "string" || typeof right === "string") return this.stringify(left) + this.stringify(right);
+        return left + right;
+      case "-": return left - right;
+      case "*": return left * right;
+      case "/": return left / right;
+      case "==": return this.valuesEqual(left, right);
+      case "!=": return !this.valuesEqual(left, right);
+      case ">": return left > right;
+      case "<": return left < right;
+      case ">=": return left >= right;
+      case "<=": return left <= right;
+      default: throw new SparkRuntimeError(`Unknown operator '${op}'`);
+    }
+  }
+  valuesEqual(a, b) {
+    if (Array.isArray(a) && Array.isArray(b)) {
+      if (a.length !== b.length) return false;
+      return a.every((v, i) => this.valuesEqual(v, b[i]));
+    }
+    return a === b;
+  }
+  callExpr(expr, env) {
+    const args = expr.args.map((a) => this.evaluate(a, env));
+    if (expr.callee === "len") {
+      if (args.length !== 1 || !(Array.isArray(args[0]) || typeof args[0] === "string")) throw new SparkRuntimeError("len() expects a single array or string argument");
+      return args[0].length;
+    }
+    if (expr.callee === "int") {
+      if (args.length !== 1) throw new SparkRuntimeError("int() expects a single argument");
+      return Math.trunc(args[0]);
+    }
+    const callee = env.get(expr.callee);
+    if (!(callee instanceof SparkFunction)) throw new SparkRuntimeError(`'${expr.callee}' is not a function`);
+    return callee.call(this, args);
+  }
+  isTruthy(value) {
+    if (value === null || value === undefined) return false;
+    if (typeof value === "boolean") return value;
+    return true;
+  }
+  stringify(value) {
+    if (typeof value === "boolean") return value ? "true" : "false";
+    if (typeof value === "number") return String(value);
+    if (Array.isArray(value)) return "[" + value.map((v) => this.stringify(v)).join(", ") + "]";
+    if (value === null || value === undefined) return "null";
+    return String(value);
+  }
+}
+
+function runSparkSource(source, onOutput) {
+  const tokens = new Lexer(source).tokenize();
+  const ast = new Parser(tokens).parse();
+  new Interpreter(onOutput).run(ast);
+}
+
+// ============================================================
+// UI wiring
+// ============================================================
+const EXAMPLES = {
+  fibonacci: `# Prints the first 10 numbers of the Fibonacci sequence.
+
+func fib(n) {
+    if n <= 1 {
+        return n
+    }
+    return fib(n - 1) + fib(n - 2)
+}
+
+let i = 0
+while i < 10 {
+    print(fib(i))
+    i = i + 1
+}`,
+  fizzbuzz: `# Classic FizzBuzz, written in Spark.
+# Prints numbers 1 to 20, but:
+#  - multiples of 3 -> "Fizz"
+#  - multiples of 5 -> "Buzz"
+#  - multiples of both -> "FizzBuzz"
+
+func is_divisible(n, by) {
+    return n - (by * int(n / by)) == 0
+}
+
+let i = 1
+while i <= 20 {
+    if is_divisible(i, 15) {
+        print("FizzBuzz")
+    } else {
+        if is_divisible(i, 3) {
+            print("Fizz")
+        } else {
+            if is_divisible(i, 5) {
+                print("Buzz")
+            } else {
+                print(i)
+            }
+        }
+    }
+    i = i + 1
+}`,
+  arrays: `# Arrays, booleans, and functions together.
+
+let nums = [1, 2, 3, 4, 5]
+print(nums)
+print(nums[2])
+print(len(nums))
+
+let a = true
+let b = false
+if a and b {
+    print("both true")
+} else {
+    if a or b {
+        print("at least one true")
+    }
+}`,
+  scratch: `# Write your own Spark program here.
+
+let x = 10
+print(x)`,
+};
+
+const codeEl = document.getElementById("code");
+const gutterEl = document.getElementById("gutter");
+const consoleEl = document.getElementById("console");
+const statusEl = document.getElementById("status");
+const runBtn = document.getElementById("runBtn");
+const tabsEl = document.getElementById("tabs");
+
+const STORAGE_KEY = "spark_playground_code_v1";
+
+function updateGutter() {
+  const n = codeEl.value.split("\n").length;
+  let out = "";
+  for (let i = 1; i <= n; i++) out += i + "\n";
+  gutterEl.textContent = out;
+}
+
+function saveCode() {
+  try { localStorage.setItem(STORAGE_KEY, codeEl.value); } catch (e) { /* storage unavailable, ignore */ }
+}
+
+function loadSavedCode() {
+  try { return localStorage.getItem(STORAGE_KEY); } catch (e) { return null; }
+}
+
+function setActiveTab(name) {
+  [...tabsEl.querySelectorAll("button")].forEach((b) => b.classList.toggle("active", b.dataset.example === name));
+}
+
+function loadExample(name) {
+  codeEl.value = EXAMPLES[name];
+  updateGutter();
+  setActiveTab(name);
+  saveCode();
+  clearConsole();
+}
+
+function clearConsole() {
+  consoleEl.innerHTML = '<div class="empty">Nothing here yet — hit Run.</div>';
+  statusEl.textContent = "Ready";
+  statusEl.classList.remove("err");
+}
+
+function appendConsoleLine(text, isError) {
+  if (consoleEl.querySelector(".empty")) consoleEl.innerHTML = "";
+  const div = document.createElement("div");
+  div.className = "line" + (isError ? " err" : "");
+  div.textContent = text;
+  consoleEl.appendChild(div);
+  consoleEl.scrollTop = consoleEl.scrollHeight;
+}
+
+function run() {
+  consoleEl.innerHTML = "";
+  statusEl.classList.remove("err");
+  statusEl.textContent = "Running…";
+  let outputCount = 0;
+  const start = performance.now();
+  try {
+    runSparkSource(codeEl.value, (text) => { outputCount += 1; appendConsoleLine(text, false); });
+    const elapsed = (performance.now() - start).toFixed(1);
+    statusEl.textContent = outputCount ? `Ran in ${elapsed} ms` : `Ran in ${elapsed} ms — no output`;
+    if (!outputCount) appendConsoleLine("(no output — try adding a print statement)", false);
+  } catch (e) {
+    let prefix = "Error";
+    if (e instanceof LexerError) prefix = "Lexer error";
+    else if (e instanceof ParseError) prefix = "Parse error";
+    else if (e instanceof SparkRuntimeError) prefix = "Runtime error";
+    else if (e instanceof RangeError) prefix = "Runtime error";
+    appendConsoleLine(`${prefix}: ${e && e.message ? e.message : String(e)}`, true);
+    statusEl.textContent = "Failed";
+    statusEl.classList.add("err");
+  }
+}
+
+codeEl.addEventListener("input", () => { updateGutter(); saveCode(); });
+codeEl.addEventListener("scroll", () => { gutterEl.scrollTop = codeEl.scrollTop; });
+codeEl.addEventListener("keydown", (e) => {
+  if (e.key === "Tab") {
+    e.preventDefault();
+    const start = codeEl.selectionStart, end = codeEl.selectionEnd;
+    codeEl.value = codeEl.value.slice(0, start) + "    " + codeEl.value.slice(end);
+    codeEl.selectionStart = codeEl.selectionEnd = start + 4;
+    updateGutter();
+    saveCode();
+  } else if ((e.key === "Enter") && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    run();
+  }
+});
+
+tabsEl.addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-example]");
+  if (btn) loadExample(btn.dataset.example);
+});
+
+runBtn.addEventListener("click", run);
+
+// Initial state: restore last edited code if present, else the Fibonacci example.
+const saved = loadSavedCode();
+if (saved !== null && saved.trim() !== "") {
+  codeEl.value = saved;
+  setActiveTab(null);
+} else {
+  codeEl.value = EXAMPLES.fibonacci;
+}
+updateGutter();
+</script>
+</body>
+</html>
